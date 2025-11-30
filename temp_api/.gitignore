@@ -1,0 +1,10 @@
+*.code-workspace
+
+*__pycache__*
+
+.vscode
+
+*.zip
+*.rar
+*.7z
+other
