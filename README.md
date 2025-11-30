@@ -39,8 +39,8 @@
 
 #### 1. 克隆项目
 ```bash
-git clone https://github.com/your-username/starrail-currency-war-assistant.git
-cd starrail-currency-war-assistant
+git clone https://github.com/Angelyeye/HSR-Credit-Strategist.git
+cd HSR-Credit-Strategist
 ```
 
 #### 2. 安装依赖
@@ -104,7 +104,7 @@ pip freeze > requirements.txt
 ## 项目结构说明
 
 ```
-starrail-currency-war-assistant/
+HSR-Credit-Strategist/
 ├── main.py                 # 主程序入口
 ├── screen_capture.py       # 屏幕捕获模块
 ├── ocr_engine.py           # OCR引擎模块
@@ -178,8 +178,8 @@ starrail-currency-war-assistant/
 
 ### 联系方式
 
-- **项目地址**：https://github.com/your-username/starrail-currency-war-assistant
-- **Issues**：https://github.com/your-username/starrail-currency-war-assistant/issues
+- **项目地址**：https://github.com/Angelyeye/HSR-Credit-Strategist
+- **Issues**：https://github.com/Angelyeye/HSR-Credit-Strategist/issues
 
 ### 致谢
 
