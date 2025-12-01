@@ -120,11 +120,22 @@ class DataMatcher:
         # 创建OCR识别结果的关键词集合
         ocr_keywords = set()
         for result in filtered_results:
+            text = result["text"]
             # 添加完整文本作为关键词
-            ocr_keywords.add(result["text"])
+            ocr_keywords.add(text)
+            
             # 提取中文关键词
-            text_words = re.findall(r'[\u4e00-\u9fa5]+', result["text"])
-            ocr_keywords.update(text_words)
+            chinese_text = ''.join(re.findall(r'[\u4e00-\u9fa5]+', text))
+            
+            # 提取所有可能的四字及以上中文短语作为关键词
+            # 因为所有词条名称至少有四个字
+            for i in range(len(chinese_text) - 3):
+                for j in range(i + 4, len(chinese_text) + 1):
+                    phrase = chinese_text[i:j]
+                    ocr_keywords.add(phrase)
+            
+            # 提取所有可能的中文单词（单字）
+            ocr_keywords.update(list(chinese_text))
         
         # 计算每个策略的匹配分数
         strategy_scores = {}
