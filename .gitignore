@@ -1,3 +1,5 @@
 /.trae
 /ocr.md
 /strategy_assistant.log
+__pycache__/
+*.pyc
