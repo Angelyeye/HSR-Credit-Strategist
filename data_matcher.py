@@ -183,7 +183,7 @@ class DataMatcher:
         # 构建失败指针
         self.ac_automaton.build_fail_links()
     
-    def match_strategy(self, ocr_results, min_score=0.75):
+    def match_strategy(self, ocr_results, min_score=0.7):
         """匹配策略
         
         Args:
@@ -279,7 +279,7 @@ class DataMatcher:
             return []
         
         # 过滤低置信度的OCR结果
-        filtered_results = [r for r in ocr_results if r["score"] >= 0.75]
+        filtered_results = [r for r in ocr_results if r["score"] >= 0.7]
         if not filtered_results:
             return []
         
