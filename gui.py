@@ -75,10 +75,10 @@ class StrategyGUI:
         
         # OCR置信度阈值
         ttk.Label(settings_frame, text="OCR置信度阈值:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.ocr_threshold_var = tk.DoubleVar(value=0.8)
+        self.ocr_threshold_var = tk.DoubleVar(value=0.7)
         self.ocr_threshold_scale = ttk.Scale(settings_frame, from_=0.5, to=1.0, variable=self.ocr_threshold_var, orient=tk.HORIZONTAL)
         self.ocr_threshold_scale.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
-        self.ocr_threshold_label = ttk.Label(settings_frame, text="0.8")
+        self.ocr_threshold_label = ttk.Label(settings_frame, text="0.7")
         self.ocr_threshold_label.grid(row=0, column=2, sticky=tk.W, pady=5)
         self.ocr_threshold_scale.bind("<Motion>", self.update_ocr_threshold_label)
         
