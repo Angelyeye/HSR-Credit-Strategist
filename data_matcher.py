@@ -241,10 +241,11 @@ class DataMatcher:
                 score += 8.0
             
             # 检查在OCR结果中的匹配
-            for result in filtered_results:
-                if strategy_name in result["text"]:
-                    # 结合OCR置信度计算分数
-                    score += 5.0 * result["score"]
+            # 暂时注释掉OCR置信度参与匹配的逻辑
+            # for result in filtered_results:
+            #     if strategy_name in result["text"]:
+            #         # 结合OCR置信度计算分数
+            #         score += 5.0 * result["score"]
             
             strategy_scores[index] = score
         
