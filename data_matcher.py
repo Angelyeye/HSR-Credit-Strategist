@@ -9,6 +9,97 @@ import pandas as pd
 import re
 
 
+class AhoCorasickNode:
+    """AC自动机节点"""
+    
+    def __init__(self):
+        """初始化节点"""
+        self.children = {}  # 子节点
+        self.fail = None     # 失败指针
+        self.output = []     # 输出列表，存储匹配到的模式串索引
+
+
+class AhoCorasick:
+    """AC自动机"""
+    
+    def __init__(self):
+        """初始化AC自动机"""
+        self.root = AhoCorasickNode()
+    
+    def add_pattern(self, pattern, index):
+        """添加模式串
+        
+        Args:
+            pattern: 模式串
+            index: 模式串对应的索引
+        """
+        node = self.root
+        for char in pattern:
+            if char not in node.children:
+                node.children[char] = AhoCorasickNode()
+            node = node.children[char]
+        node.output.append(index)
+    
+    def build_fail_links(self):
+        """构建失败指针"""
+        from collections import deque
+        
+        queue = deque()
+        
+        # 初始化根节点的所有子节点的失败指针为根节点
+        for child in self.root.children.values():
+            child.fail = self.root
+            queue.append(child)
+        
+        # BFS构建失败指针
+        while queue:
+            current = queue.popleft()
+            
+            for char, child in current.children.items():
+                queue.append(child)
+                
+                # 查找当前节点的失败指针
+                fail_node = current.fail
+                while fail_node is not None and char not in fail_node.children:
+                    fail_node = fail_node.fail
+                
+                if fail_node is None:
+                    child.fail = self.root
+                else:
+                    child.fail = fail_node.children[char]
+                    # 合并输出列表
+                    child.output.extend(child.fail.output)
+    
+    def search(self, text):
+        """搜索文本中的模式串
+        
+        Args:
+            text: 待搜索文本
+            
+        Returns:
+            list: 匹配到的模式串索引列表
+        """
+        matched_indices = set()
+        node = self.root
+        
+        for char in text:
+            # 沿着失败指针查找匹配的节点
+            while node is not None and char not in node.children:
+                node = node.fail
+            
+            if node is None:
+                node = self.root
+                continue
+            
+            node = node.children[char]
+            
+            # 收集匹配结果
+            if node.output:
+                matched_indices.update(node.output)
+        
+        return list(matched_indices)
+
+
 class DataMatcher:
     """数据匹配类"""
     
@@ -20,7 +111,9 @@ class DataMatcher:
         """
         self.strategy_data_path = strategy_data_path
         self.strategy_data = None
-        self.keyword_index = {}
+        self.ac_automaton = None
+        self.pattern_index_map = {}  # 模式串到索引的映射
+        self.index_pattern_map = {}  # 索引到模式串的映射
         self.load_strategy_data()
     
     def load_strategy_data(self):
@@ -63,38 +156,32 @@ class DataMatcher:
             self.strategy_data = None
     
     def build_keyword_index(self):
-        """构建关键词索引"""
+        """构建AC自动机索引"""
         if self.strategy_data is None:
             return
         
-        # 清空索引
-        self.keyword_index.clear()
+        # 创建AC自动机实例
+        self.ac_automaton = AhoCorasick()
+        
+        # 重置映射
+        self.pattern_index_map.clear()
+        self.index_pattern_map.clear()
         
         # 遍历每条策略数据
         for index, row in self.strategy_data.iterrows():
-            # 提取关键词
-            keywords = []
-            
-            # 将完整策略名称作为重要关键词
+            # 将完整策略名称作为模式串
             if pd.notna(row['名称']):
                 name = str(row['名称'])
-                keywords.append(name)  # 完整名称作为一级关键词
-                
-                # 从名称中提取中文关键词作为二级关键词
-                # name_words = re.findall(r'[\u4e00-\u9fa5]+', name)
-                # keywords.extend(name_words)
-            
-            # 从效果中提取关键词作为三级关键词
-            # if pd.notna(row['效果']):
-            #     effect = str(row['效果'])
-            #     effect_words = re.findall(r'[\u4e00-\u9fa5]+', effect)
-            #     keywords.extend(effect_words)
-            
-            # 添加到索引
-            for keyword in keywords:
-                if keyword not in self.keyword_index:
-                    self.keyword_index[keyword] = []
-                self.keyword_index[keyword].append(index)
+                # 只添加4个汉字及以上的名称
+                if len(name) >= 4:
+                    # 添加到AC自动机
+                    self.ac_automaton.add_pattern(name, index)
+                    # 更新映射
+                    self.pattern_index_map[name] = index
+                    self.index_pattern_map[index] = name
+        
+        # 构建失败指针
+        self.ac_automaton.build_fail_links()
     
     def match_strategy(self, ocr_results, min_score=0.75):
         """匹配策略
@@ -106,7 +193,7 @@ class DataMatcher:
         Returns:
             list: 匹配到的策略，格式为[{"类别": "类别", "名称": "名称", "效果": "效果", "推荐": "推荐"}, ...]
         """
-        if self.strategy_data is None:
+        if self.strategy_data is None or self.ac_automaton is None:
             return []
         
         # 过滤低置信度的OCR结果
@@ -114,63 +201,52 @@ class DataMatcher:
         if not filtered_results:
             return []
         
-        # 提取识别到的文本和置信度
+        # 提取识别到的文本
         recognized_text = "".join([r["text"] for r in filtered_results])
         
-        # 创建OCR识别结果的关键词集合
-        ocr_keywords = set()
-        for result in filtered_results:
-            text = result["text"]
-            # 添加完整文本作为关键词
-            ocr_keywords.add(text)
-            
-            # 提取中文关键词
-            chinese_text = ''.join(re.findall(r'[\u4e00-\u9fa5]+', text))
-            
-            # 提取所有可能的四字及以上中文短语作为关键词
-            # 因为所有词条名称至少有四个字
-            for i in range(len(chinese_text) - 3):
-                for j in range(i + 4, len(chinese_text) + 1):
-                    phrase = chinese_text[i:j]
-                    ocr_keywords.add(phrase)
-            
-            # 提取所有可能的中文单词（单字）
-            ocr_keywords.update(list(chinese_text))
+        # 使用AC自动机搜索匹配的策略
+        matched_indices = self.ac_automaton.search(recognized_text)
+        
+        # 如果没有匹配到结果，尝试提取中文文本后再次匹配
+        if not matched_indices:
+            # 提取中文文本
+            chinese_text = ''.join(re.findall(r'[\u4e00-\u9fa5]+', recognized_text))
+            # 再次搜索
+            matched_indices = self.ac_automaton.search(chinese_text)
+        
+        # 如果仍然没有匹配到结果，返回空列表
+        if not matched_indices:
+            return []
         
         # 计算每个策略的匹配分数
         strategy_scores = {}
         
-        # 遍历每条策略数据
-        for index, row in self.strategy_data.iterrows():
+        # 遍历匹配到的索引
+        for index in matched_indices:
+            # 获取策略名称
+            strategy_name = self.index_pattern_map.get(index, "")
+            if not strategy_name:
+                continue
+            
+            # 计算匹配分数
             score = 0.0
             
-            # 获取策略名称
-            if pd.notna(row['名称']):
-                strategy_name = str(row['名称'])
-                
-                # 完整名称匹配（最高权重）
-                if strategy_name in recognized_text:
-                    score += 10.0
-                
-                # 名称关键词匹配（中等权重）
-                name_words = re.findall(r'[\u4e00-\u9fa5]+', strategy_name)
-                for word in name_words:
-                    if word in ocr_keywords:
-                        score += 5.0
+            # 检查完整名称匹配
+            if strategy_name in recognized_text:
+                score += 10.0
             
-            # 获取策略效果
-            # if pd.notna(row['效果']):
-            #     strategy_effect = str(row['效果'])
-                
-            #     # 效果关键词匹配（低权重）
-            #     effect_words = re.findall(r'[\u4e00-\u9fa5]+', strategy_effect)
-            #     for word in effect_words:
-            #         if word in ocr_keywords:
-            #             score += 2.0
+            # 检查在中文文本中的匹配
+            chinese_text = ''.join(re.findall(r'[\u4e00-\u9fa5]+', recognized_text))
+            if strategy_name in chinese_text:
+                score += 8.0
             
-            # 只有分数大于0的策略才被认为是匹配的
-            if score > 0:
-                strategy_scores[index] = score
+            # 检查在OCR结果中的匹配
+            for result in filtered_results:
+                if strategy_name in result["text"]:
+                    # 结合OCR置信度计算分数
+                    score += 5.0 * result["score"]
+            
+            strategy_scores[index] = score
         
         # 按分数降序排序
         sorted_indices = sorted(strategy_scores.keys(), key=lambda x: strategy_scores[x], reverse=True)

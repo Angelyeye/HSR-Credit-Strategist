@@ -233,10 +233,10 @@ class StrategyGUI:
             if strategies:
                 for i, strategy in enumerate(strategies, 1):
                     self.strategy_text.insert(tk.END, f"策略{i}:\n")
-                    self.strategy_text.insert(tk.END, f"  类别: {strategy['类别']}\n")
+                    #self.strategy_text.insert(tk.END, f"  类别: {strategy['类别']}\n")
                     self.strategy_text.insert(tk.END, f"  名称: {strategy['名称']}\n")
                     self.strategy_text.insert(tk.END, f"  效果: {strategy['效果']}\n")
-                    self.strategy_text.insert(tk.END, f"  推荐: {strategy['推荐']}\n\n")
+                    self.strategy_text.insert(tk.END, f"  策略建议: {strategy['推荐']}\n\n")
             else:
                 self.strategy_text.insert(tk.END, "未匹配到相关策略")
         except Exception as e:
